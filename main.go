@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
 
 const (
-	host     = "localhost"
-	port     = 5432
-	user     = "hasan.y"
-	password = "Dana0Yara"
-	dbname   = "postgres"
+	host   = "localhost"
+	port   = 5432
+	dbname = "postgres"
 )
 
 func main() {
@@ -31,6 +31,17 @@ func main() {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Restart required for the system to capture the Env variables changes
+	user := os.Getenv("PGUSER")
+	password := os.Getenv("PGPSWD")
+
+	println("user: ", user, ", password: ", password)
+
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		fmt.Println(pair[0])
 	}
 
 	// connection string
