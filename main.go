@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -18,11 +18,28 @@ const (
 )
 
 func main() {
-	cmd := exec.Command("powershell", "pg_ctl", "stop") // stop the pgsql server
+	cmd := exec.Command("cmd", "pg_ctl", "status") // cmd := exec.Command("powershell", "pg_ctl", "status") status of the pgsql server
+	/*	out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatalf("cmd.Run() failed with %s\n", err)
+		}
+		fmt.Printf("combined out:\n%s\n", string(out))
+	*/
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
-
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("err at pgsql server status check")
+		log.Printf("cmd.Run() failed with %s\n", err)
+	}
+	outStr, errStr := string(stdout.Bytes()), string(stderr.Bytes())
+	fmt.Printf("\nout:\n%s\nerr:\n%s\n", outStr, errStr)
+
+	cmd = exec.Command("powershell", "pg_ctl", "stop") // stop the pgsql server
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("err at pgsql server shutdown", err)
 	}
 
 	cmd = exec.Command("powershell", "pg_ctl", "start") // start up the pgsql server
@@ -30,19 +47,16 @@ func main() {
 	err = cmd.Run()
 
 	if err != nil {
+		fmt.Println("err at pgsql server startup")
 		log.Fatal(err)
 	}
 
-	// Restart required for the system to capture the Env variables changes
+	// Terminal (not PC) Restart required for the system to capture the Env variables changes
+	// https://blog.kowalczyk.info/article/wOYk/advanced-command-execution-in-go-with-osexec.html
 	user := os.Getenv("PGUSER")
 	password := os.Getenv("PGPSWD")
 
 	println("user: ", user, ", password: ", password)
-
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		fmt.Println(pair[0])
-	}
 
 	// connection string
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
