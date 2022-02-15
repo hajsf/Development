@@ -1,0 +1,135 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+
+	_ "github.com/codenotary/immudb/pkg/stdlib"
+)
+
+// http://go-database-sql.org/retrieving.html
+const (
+	host     = "127.0.0.1"
+	port     = 3322
+	username = "immudb"
+	secret   = "Dana0Yara;"
+	dbname   = "defaultdb"
+)
+
+type User struct {
+	id   int
+	name string
+}
+
+func main() {
+	// https://docs.immudb.io/master/develop/sqlstdlib.html
+	// immudb://username:secret@host:port/db
+	//db, err := sql.Open("immudb", "immudb://immudb:immudb@127.0.0.1:3322/defaultdb?sslmode=disable")
+
+	connectionlInfo := fmt.Sprintf("immudb://%s:%s@%s:%d/%s?sslmode=disable",
+		username, secret, host, port, dbname)
+	db, err := sql.Open("immudb", connectionlInfo)
+	if err != nil {
+		panic(err)
+	}
+	// close database
+	defer db.Close()
+
+	// check db
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Connected!")
+	//	ctx := context.TODO()
+	//	_, err = db.ExecContext(ctx, "CREATE TABLE myTable(id INTEGER, name VARCHAR, PRIMARY KEY id)")
+
+	//	sqlStatement := `INSERT INTO myTable (id, name) VALUES (3, 'immu1')`
+	// r, err := db.Exec(sqlStatement)
+	/*	sqlStatement := `
+			INSERT INTO myTable (id, name)
+			VALUES ($1, $2)
+		`
+			r, err := db.Exec(sqlStatement, 4, "Hasan")
+			if err != nil {
+				panic(err)
+			}
+			println(r) // (0xc928b8,0xc0000a62e0)
+	*/
+	//	user := []User{}
+	sql := "CREATE TABLE IF NOT EXISTS people(id INTEGER, name VARCHAR, salary INTEGER, PRIMARY KEY id);"
+	_, err = db.Exec(sql, 1, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	sql = "INSERT INTO people(id, name, salary) VALUES ($1, $2, $3);"
+	_, err = db.Exec(sql, 1, "Joe", 10000, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	sqlQuery := `DELETE FROM myTable where id = ($1)`
+	r, err := db.Exec(sqlQuery, 1, nil)
+	if err != nil {
+		panic(err)
+	}
+	println(r)
+
+	sqlQuery = `SELECT * FROM myTable`
+	rows, err := db.Query(sqlQuery, nil)
+	if err != nil {
+		panic(err)
+	}
+	// https://docs.immudb.io/1.0.0/jumpstart.html#sql-operations-with-the-go-sdk
+	var (
+		id   int
+		name string
+	)
+
+	for rows.Next() {
+		err := rows.Scan(&id, &name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(id, name)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+/*
+  sqlStatement := `
+INSERT INTO users (age, email, first_name, last_name)
+VALUES ($1, $2, $3, $4)
+RETURNING id`
+  id := 0
+  err = db.QueryRow(sqlStatement, 30, "jon@calhoun.io", "Jonathan", "Calhoun").Scan(&id)
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println("New record ID is:", id)
+*/
+
+/*
+D:\>immuadmin login immudb
+Password:
+logged in
+SECURITY WARNING: immudb user has the default password: please change it to ensure proper security
+Choose a password for immudb:
+password does not meet the requirements. It must contain upper and lower case letters, digits, punctuation mark or symbol
+*/
+
+/*
+D:\>immuadmin login immudb
+Password:
+logged in
+SECURITY WARNING: immudb user has the default password: please change it to ensure proper security
+Choose a password for immudb:
+Confirm password:
+immudb's password has been changed
+*/
